@@ -59,7 +59,7 @@ int start_server(struct parameters *params)
 	/* Main loop */
 	while (!exiting) {
 		if ((cl_socket = accept(listen_socket, (struct sockaddr*)&client, &addrlen)) > 0) {
-			switch (vfork()) {
+			switch (fork()) {
 				case 0:
 					serve_client(cl_socket);
 					break;
