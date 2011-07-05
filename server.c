@@ -5,10 +5,13 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <stdio.h>
+#include <string.h>
 
 #include "server.h"
 #include "daemonize.h"
 #include "log.h"
+
+extern struct client **clients;
 
 int create_listen_socket(int port)
 {
@@ -39,8 +42,7 @@ int start_server(struct parameters *params)
 {
 	int i;
 	int listen_socket,
-		cl_socket,
-		clients[MAX_CLIENTS] = {0};
+		cl_socket;
 	int exiting = 0;
 	struct sockaddr_in client;
 	socklen_t addrlen = sizeof client;
@@ -49,7 +51,7 @@ int start_server(struct parameters *params)
 		daemonize();
 	}
 
-	listen_socket = create_listen_socket(SERVER_PORT);
+	listen_socket = create_listen_socket(params->server_port);
 
 	if (listen_socket < 0) {
 		logit(L_FATAL "Failed to create listen socket");
@@ -59,21 +61,25 @@ int start_server(struct parameters *params)
 	/* Main loop */
 	while (!exiting) {
 		if ((cl_socket = accept(listen_socket, (struct sockaddr*)&client, &addrlen)) > 0) {
+			for (i=0; i<params->max_clients; i++)
+				if (clients[i] == 0) break;
+
+			if (i == params->max_clients) {
+				logit(L_WARNING "Too many clients, dropping client [%s]", "...");
+				continue;
+			}
+
 			switch (fork()) {
 				case 0:
-					serve_client(cl_socket);
 					break;
+
 				case -1:
-					perror("vfork");
+					perror("fork");
 					exit(-1);
 					break;
+
 				default:
-					for (i = 0; i<MAX_CLIENTS; i++) {
-						if (clients[i] == 0)
-							break;
-					}
-					if (i == MAX_CLIENTS) {
-					}
+					//logit(L_DEBUG "Client %s connected", )
 					break;
 			}
 		}

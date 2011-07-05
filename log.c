@@ -14,7 +14,7 @@ int logit(const char *format, ...)
 	va_list ap;
 	char buf[512], buf2[512];
 	time_t t = time(NULL);
-	struct tm *tms = gmtime(&t);
+	struct tm *tms = localtime(&t);
 	char *levels[] = { L_FATAL, L_ERROR, L_WARNING, L_INFO, L_DEBUG };
 	int i;
 
@@ -22,10 +22,10 @@ int logit(const char *format, ...)
 		if (strstr(format, levels[i]))
 			break;
 
-	if (i > params.verb_level && i != 5)
+	if (i >= params.verb_level && i != 5)
 		return 0;
 
-	sprintf(buf, "[%2d:%2d:%2d]: %s\n", tms->tm_hour, tms->tm_min, tms->tm_sec, format);
+	sprintf(buf, "[%02d:%02d:%02d]: %s\n", tms->tm_hour, tms->tm_min, tms->tm_sec, format);
 
 	va_start(ap, format);
 	vsprintf(buf2, buf, ap);
