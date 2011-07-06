@@ -1,6 +1,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <arpa/inet.h>
 #include <fcntl.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -44,6 +45,7 @@ int start_server(struct parameters *params)
 	int listen_socket,
 		cl_socket;
 	int exiting = 0;
+	pid_t pid;
 	struct sockaddr_in client;
 	socklen_t addrlen = sizeof client;
 
@@ -60,16 +62,18 @@ int start_server(struct parameters *params)
 
 	/* Main loop */
 	while (!exiting) {
+
 		if ((cl_socket = accept(listen_socket, (struct sockaddr*)&client, &addrlen)) > 0) {
 			for (i=0; i<params->max_clients; i++)
 				if (clients[i] == 0) break;
 
 			if (i == params->max_clients) {
-				logit(L_WARNING "Too many clients, dropping client [%s]", "...");
+				logit(L_WARNING "Too many clients, dropping client [%s]",
+						inet_ntoa(client.sin_addr));
 				continue;
 			}
 
-			switch (fork()) {
+			switch ((pid = fork())) {
 				case 0:
 					break;
 
@@ -79,7 +83,13 @@ int start_server(struct parameters *params)
 					break;
 
 				default:
-					//logit(L_DEBUG "Client %s connected", )
+					logit(L_INFO "Client [%s] connected", inet_ntoa(client.sin_addr));
+
+					clients[i] = calloc(1, sizeof(struct client));
+					clients[i]->pid    = pid;
+					clients[i]->socket = cl_socket;
+
+					serve_client(cl_socket);
 					break;
 			}
 		}

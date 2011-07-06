@@ -1,6 +1,8 @@
 #ifndef _SERVER_H_
 #define _SERVER_H_
 
+#include <signal.h>
+
 #define SERVER_VERSION "0.0.1"
 #define DEFAULT_SERVER_PORT 1190
 
@@ -17,6 +19,7 @@ struct parameters {
 struct client {
 	int socket;
 	int master; /* if set to 1, client can control the robot */
+	pid_t pid;
 };
 
 void parse_cmdline(int argc, char *argv[], struct parameters *params);
@@ -26,7 +29,7 @@ void show_help(const char *path);
 void show_version();
 
 void clean_up();
-void handle_sigint(int sig);
+void signal_handler(int sig, siginfo_t *siginfo, void *data);
 
 void serve_client(int sock);
 

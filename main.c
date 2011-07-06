@@ -1,5 +1,6 @@
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/wait.h>
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -134,13 +135,30 @@ void clean_up()
 	free(clients);
 }
 
-void handle_sigint(int sig)
+void signal_handler(int sig, siginfo_t *siginfo, void *data)
 {
-	logit("Caught SIGINT, quitting...\n");
+	int i, status;
 
-	clean_up();
+	logit(L_INFO "%s\n", strsignal(sig));
 
-	exit(0);
+	switch (sig) {
+		case SIGCHLD:
+			logit(L_INFO "Child [pid: %d] exited", siginfo->si_pid);
+
+			for (i=0; i<params.max_clients; i++)
+				if (clients[i] && clients[i]->pid == siginfo->si_pid) {
+					waitpid(siginfo->si_pid, &status, 0);
+					logit(L_DEBUG "Freeing memory for client struct...");
+					free(clients[i]);
+					clients[i] = 0;
+				}
+			break;
+
+		default:
+			logit(L_INFO "Exiting");
+			clean_up();
+			exit(0);
+	}
 }
 
 int main(int argc, char *argv[])
@@ -177,8 +195,13 @@ int main(int argc, char *argv[])
 	}
 
 	sigemptyset(&sigact.sa_mask);
-	sigact.sa_handler = handle_sigint;
-	sigaction(SIGINT, &sigact, 0);
+
+	sigact.sa_flags     = SA_SIGINFO;
+	sigact.sa_sigaction = signal_handler;
+
+	sigaction(SIGINT, &sigact, NULL);
+	sigaction(SIGTERM, &sigact, NULL);
+	sigaction(SIGCHLD, &sigact, NULL);
 
 	logit(L_INFO "Starting server");
 
