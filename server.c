@@ -13,6 +13,7 @@
 #include "log.h"
 
 extern struct client **clients;
+extern int listen_socket;
 
 int create_listen_socket(int port)
 {
@@ -42,8 +43,7 @@ int create_listen_socket(int port)
 int start_server(struct parameters *params)
 {
 	int i;
-	int listen_socket,
-		cl_socket;
+	int cl_socket, res;
 	int exiting = 0;
 	pid_t pid;
 	struct sockaddr_in client;
@@ -58,6 +58,11 @@ int start_server(struct parameters *params)
 	if (listen_socket < 0) {
 		logit(L_FATAL "Failed to create listen socket");
 		exit(-1);
+	}
+
+	if (setsockopt(listen_socket, SOL_SOCKET, SO_REUSEADDR, &res, sizeof res) < 0) {
+		perror("setsockopt");
+		logit(L_WARNING "setsockopt() failed");
 	}
 
 	/* Main loop */
@@ -75,6 +80,7 @@ int start_server(struct parameters *params)
 
 			switch ((pid = fork())) {
 				case 0:
+					serve_client(cl_socket);
 					break;
 
 				case -1:
@@ -88,8 +94,6 @@ int start_server(struct parameters *params)
 					clients[i] = calloc(1, sizeof(struct client));
 					clients[i]->pid    = pid;
 					clients[i]->socket = cl_socket;
-
-					serve_client(cl_socket);
 					break;
 			}
 		}
@@ -100,10 +104,16 @@ int start_server(struct parameters *params)
 
 void serve_client(int sock)
 {
-	if (send(sock, "Hello!", 7, 0) < 0) {
-		perror("send");
-		_exit(-1);
+	char buf[128] = { 0 };
+	while (strcmp(buf, "exit") != 0) {
+		if (recv(sock, buf, 128, 0) < 0)
+			break;;
+
+		logit(L_DEBUG "recieved: '%s'", buf);
 	}
+	shutdown(sock, SHUT_RDWR);
 	close(sock);
+
+	_exit(0);
 }
 

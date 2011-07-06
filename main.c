@@ -1,6 +1,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
+#include <sys/socket.h>
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -14,6 +15,7 @@
 
 struct parameters params;
 struct client **clients;
+int listen_socket;
 
 void parse_cmdline(int argc, char *argv[], struct parameters *params)
 {
@@ -128,10 +130,15 @@ void clean_up()
 	free(params.log_file_path);
 
 	for (i=0; i<params.max_clients; i++) {
-		if (clients[i])
+		if (clients[i]) {
+			shutdown(clients[i]->socket, SHUT_RDWR);
+			close(clients[i]->socket);
 			free(clients[i]);
+		}
 	}
 
+	shutdown(listen_socket, SHUT_RDWR);
+	close(listen_socket);
 	free(clients);
 }
 
