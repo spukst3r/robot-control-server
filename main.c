@@ -137,6 +137,7 @@ void clean_up()
 		}
 	}
 
+	log_dispose();
 	shutdown(listen_socket, SHUT_RDWR);
 	close(listen_socket);
 	free(clients);
@@ -171,6 +172,11 @@ void signal_handler(int sig, siginfo_t *siginfo, void *data)
 int main(int argc, char *argv[])
 {
 	struct sigaction sigact;
+
+	if (log_init() < 0) {
+		fprintf(stderr, "Log system failed to start, aborting\n");
+		exit (-1);
+	}
 
 	default_params(&params);
 	parse_cmdline(argc, argv, &params);

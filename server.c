@@ -1,10 +1,13 @@
+#include <fcntl.h>
+#include <unistd.h>
+#include <semaphore.h>
 #include <sys/types.h>
+#include <sys/stat.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
-#include <fcntl.h>
+
 #include <stdlib.h>
-#include <unistd.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -18,7 +21,7 @@ extern int listen_socket;
 int create_listen_socket(int port)
 {
 	struct sockaddr_in addr = {0};
-	int s;
+	int s;//, sem;
 
 	addr.sin_port        = htons(port);
 	addr.sin_addr.s_addr = htonl(INADDR_ANY);
@@ -43,7 +46,7 @@ int create_listen_socket(int port)
 int start_server(struct parameters *params)
 {
 	int i;
-	int cl_socket, res;
+	int cl_socket, val = 1;
 	int exiting = 0;
 	pid_t pid;
 	struct sockaddr_in client;
@@ -60,7 +63,7 @@ int start_server(struct parameters *params)
 		exit(-1);
 	}
 
-	if (setsockopt(listen_socket, SOL_SOCKET, SO_REUSEADDR, &res, sizeof res) < 0) {
+	if (setsockopt(listen_socket, SOL_SOCKET, SO_REUSEADDR, &val, sizeof val) < 0) {
 		perror("setsockopt");
 		logit(L_WARNING "setsockopt() failed");
 	}
