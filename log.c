@@ -29,14 +29,14 @@ int logit(const char *format, ...)
 		return -1;
 	}
 
-	sem_wait(sem);
-
 	for (i = 0; i < 5; i++)
 		if (strstr(format, levels[i]))
 			break;
 
 	if (i >= params.verb_level && i != 5)
 		return 0;
+
+	sem_wait(sem);
 
 	sprintf(buf, "[%02d:%02d:%02d] %s\n", tms->tm_hour, tms->tm_min, tms->tm_sec, format);
 
