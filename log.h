@@ -8,6 +8,8 @@
 #define L_DEBUG 	"DEBUG: "
 
 int logit(const char *format, ...);
+int log_init();
+int log_dispose();
 
 #endif
 
