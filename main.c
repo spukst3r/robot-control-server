@@ -2,13 +2,15 @@
 #include <sys/stat.h>
 #include <sys/wait.h>
 #include <sys/socket.h>
+#include <semaphore.h>
 #include <fcntl.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 #include <unistd.h>
 #include <signal.h>
 #include <getopt.h>
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #include "server.h"
 #include "log.h"
@@ -16,6 +18,7 @@
 struct parameters params;
 struct client **clients;
 int listen_socket;
+sem_t *main_process_sem;
 
 void parse_cmdline(int argc, char *argv[], struct parameters *params)
 {
@@ -123,11 +126,12 @@ void show_version()
 void clean_up()
 {
 	int i;
+	static int cleaned = 0;
+
+	if (cleaned)
+		return;
 
 	logit(L_DEBUG "Cleaning up...");
-
-	close(params.log_file);
-	free(params.log_file_path);
 
 	for (i=0; i<params.max_clients; i++) {
 		if (clients[i]) {
@@ -137,10 +141,23 @@ void clean_up()
 		}
 	}
 
-	log_dispose();
+	if (main_process_sem != NULL) {
+		sem_close(main_process_sem);
+		sem_unlink(MP_SEM_NAME);
+	}
+
 	shutdown(listen_socket, SHUT_RDWR);
 	close(listen_socket);
 	free(clients);
+
+	logit(L_DEBUG "Done");
+
+	close(params.log_file);
+	free(params.log_file_path);
+
+	log_dispose();
+
+	cleaned = 1;
 }
 
 void signal_handler(int sig, siginfo_t *siginfo, void *data)
@@ -172,6 +189,8 @@ void signal_handler(int sig, siginfo_t *siginfo, void *data)
 int main(int argc, char *argv[])
 {
 	struct sigaction sigact;
+
+	atexit(clean_up);
 
 	if (log_init() < 0) {
 		fprintf(stderr, "Log system failed to start, aborting\n");

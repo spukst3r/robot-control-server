@@ -17,6 +17,7 @@
 
 extern struct client **clients;
 extern int listen_socket;
+extern sem_t *main_process_sem;
 
 int create_listen_socket(int port)
 {
@@ -51,6 +52,8 @@ int start_server(struct parameters *params)
 	pid_t pid;
 	struct sockaddr_in client;
 	socklen_t addrlen = sizeof client;
+
+	//if ()
 
 	if (params->daemonize) {
 		daemonize();

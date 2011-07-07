@@ -51,6 +51,7 @@ int logit(const char *format, ...)
 	return res;
 }
 
+// TODO: move all settings from params to log_init
 int log_init()
 {
 	sem = sem_open("/logitsemaphore", O_CREAT | O_EXCL, 660, 1);
