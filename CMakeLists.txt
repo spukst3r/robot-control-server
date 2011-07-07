@@ -7,3 +7,5 @@ set (SOURCES main.c server.c daemonize.c log.c)
 
 add_executable(server ${SOURCES})
 
+target_link_libraries(${PROJECT} rt)
+
