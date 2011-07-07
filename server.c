@@ -68,7 +68,8 @@ int start_server(struct parameters *params)
 	/* Main loop */
 	while (!exiting) {
 
-		if ((cl_socket = accept(listen_socket, (struct sockaddr*)&client, &addrlen)) > 0) {
+		if ((cl_socket = accept(listen_socket, (struct sockaddr*)&client,
+						&addrlen)) > 0) {
 			for (i=0; i<params->max_clients; i++)
 				if (clients[i] == 0) break;
 
@@ -107,13 +108,13 @@ void serve_client(int sock)
 	char buf[128] = { 0 };
 	while (strcmp(buf, "exit") != 0) {
 		if (recv(sock, buf, 128, 0) < 0)
-			break;;
+			break;
 
 		logit(L_DEBUG "recieved: '%s'", buf);
 	}
 	shutdown(sock, SHUT_RDWR);
 	close(sock);
 
-	_exit(0);
+	exit(0);
 }
 
