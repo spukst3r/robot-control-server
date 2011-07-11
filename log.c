@@ -1,4 +1,5 @@
 #include <sys/stat.h>
+#include <sys/time.h>
 #include <semaphore.h>
 #include <fcntl.h>
 #include <unistd.h>
@@ -13,7 +14,8 @@
 
 extern struct parameters params;
 
-static sem_t *sem;
+static sem_t sem;
+static int called_init;
 
 int logit(const char *format, ...)
 {
@@ -21,12 +23,13 @@ int logit(const char *format, ...)
 	char buf[512], buf2[512];
 	time_t t = time(NULL);
 	struct tm *tms = localtime(&t);
+	struct timeval tval;
+	struct timezone tzone;
 	char *levels[] = { L_FATAL, L_ERROR, L_WARNING, L_INFO, L_DEBUG };
 	int i, res;
 
-	if (sem == NULL) {
-		fprintf(stderr, "call log_init() before using logit()\n");
-		return -1;
+	if (!called_init) {
+		fprintf(stderr, "Call log_init first!\n");
 	}
 
 	for (i = 0; i < 5; i++)
@@ -36,9 +39,11 @@ int logit(const char *format, ...)
 	if (i >= params.verb_level && i != 5)
 		return 0;
 
-	sem_wait(sem);
+	sem_wait(&sem);
 
-	sprintf(buf, "[%02d:%02d:%02d] %s\n", tms->tm_hour, tms->tm_min, tms->tm_sec, format);
+	gettimeofday(&tval, &tzone);
+	sprintf(buf, "[%02d:%02d:%02d.%ld] %s\n", tms->tm_hour, tms->tm_min, tms->tm_sec,
+			tval.tv_usec, format);
 
 	va_start(ap, format);
 	vsprintf(buf2, buf, ap);
@@ -46,7 +51,7 @@ int logit(const char *format, ...)
 
 	res = write(params.log_file, buf2, strlen(buf2));
 
-	sem_post(sem);
+	sem_post(&sem);
 
 	return res;
 }
@@ -54,19 +59,21 @@ int logit(const char *format, ...)
 // TODO: move all settings from params to log_init
 int log_init()
 {
-	sem = sem_open("/logitsemaphore", O_CREAT | O_EXCL, 660, 1);
-	if (sem == SEM_FAILED) {
+	int ret = sem_init(&sem, 1, 1);
+
+	if (ret < 0) {
 		perror("sem_open");
 		return -1;
 	}
+	called_init = 1;
 	return 0;
 }
 
 int log_dispose()
 {
-	sem_close(sem);
-	if (sem_unlink("/logitsemaphore") < 0) {
-		perror("sem_unlink");
+	called_init = 0;
+	if (sem_destroy(&sem) < 0) {
+		perror("sem_destroy");
 		return -1;
 	}
 	return 0;
