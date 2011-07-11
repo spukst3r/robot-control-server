@@ -1,0 +1,14 @@
+robot-control-server
+
+Features:
+
+* multiple clients handling
+* stability
+* light weight
+
+TODO:
+
+* send video from webcam to all clients
+* allow only one client to control the robot
+* config file parsing
+
