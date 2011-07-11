@@ -135,15 +135,12 @@ void clean_up()
 
 	for (i=0; i<params.max_clients; i++) {
 		if (clients[i]) {
+			pthread_cancel(clients[i]->thread_id);
 			shutdown(clients[i]->socket, SHUT_RDWR);
 			close(clients[i]->socket);
 			free(clients[i]);
+			clients[i] = NULL;
 		}
-	}
-
-	if (main_process_sem != NULL) {
-		sem_close(main_process_sem);
-		sem_unlink(MP_SEM_NAME);
 	}
 
 	shutdown(listen_socket, SHUT_RDWR);
@@ -162,7 +159,7 @@ void clean_up()
 
 void signal_handler(int sig, siginfo_t *siginfo, void *data)
 {
-	int i, status;
+	//int i, status;
 
 	logit(L_INFO "%s\n", strsignal(sig));
 
@@ -170,13 +167,14 @@ void signal_handler(int sig, siginfo_t *siginfo, void *data)
 		case SIGCHLD:
 			logit(L_INFO "Child [pid: %d] exited", siginfo->si_pid);
 
-			for (i=0; i<params.max_clients; i++)
-				if (clients[i] && clients[i]->pid == siginfo->si_pid) {
-					waitpid(siginfo->si_pid, &status, 0);
-					logit(L_DEBUG "Freeing memory for client struct...");
-					free(clients[i]);
-					clients[i] = 0;
-				}
+/* 			for (i=0; i<params.max_clients; i++)
+ * 				if (clients[i] && clients[i]->pid == siginfo->si_pid) {
+ * 					waitpid(siginfo->si_pid, &status, 0);
+ * 					logit(L_DEBUG "Freeing memory for client struct...");
+ * 					free(clients[i]);
+ * 					clients[i] = 0;
+ * 				}
+ */
 			break;
 
 		default:

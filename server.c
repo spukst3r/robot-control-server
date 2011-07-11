@@ -1,5 +1,6 @@
 #include <fcntl.h>
 #include <unistd.h>
+#include <pthread.h>
 #include <semaphore.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -7,6 +8,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
+#include <errno.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -17,12 +19,13 @@
 
 extern struct client **clients;
 extern int listen_socket;
-extern sem_t *main_process_sem;
+
+sem_t thread_start_lock, thread_arr_lock;
 
 int create_listen_socket(int port)
 {
 	struct sockaddr_in addr = {0};
-	int s;//, sem;
+	int s;
 
 	addr.sin_port        = htons(port);
 	addr.sin_addr.s_addr = htonl(INADDR_ANY);
@@ -36,7 +39,7 @@ int create_listen_socket(int port)
 		perror("bind");
 		return -1;
 	}
-	if (listen(s, 6) < 0) {
+	if (listen(s, 10) < 0) {
 		perror("listen");
 		return -1;
 	}
@@ -48,12 +51,21 @@ int start_server(struct parameters *params)
 {
 	int i;
 	int cl_socket, val = 1;
-	int exiting = 0;
-	pid_t pid;
+	int exiting = 0,
+		ret = 0;
 	struct sockaddr_in client;
 	socklen_t addrlen = sizeof client;
+	pthread_t thread;
 
-	//if ()
+	if (sem_init(&thread_start_lock, 1, 0)) {
+		logit(L_FATAL "Failed to create thread_start_lock");
+		exit(-7);
+	}
+
+	if (sem_init(&thread_arr_lock, 1, 1)) {
+		logit(L_FATAL "Failed to create thread_arr_lock");
+		exit(-8);
+	}
 
 	if (params->daemonize) {
 		daemonize();
@@ -66,61 +78,72 @@ int start_server(struct parameters *params)
 		exit(-1);
 	}
 
-	if (setsockopt(listen_socket, SOL_SOCKET, SO_REUSEADDR, &val, sizeof val) < 0) {
-		perror("setsockopt");
-		logit(L_WARNING "setsockopt() failed");
-	}
+	if (setsockopt(listen_socket, SOL_SOCKET, SO_REUSEADDR, &val, sizeof val) < 0)
+		logit(L_WARNING "setsockopt() failed: %s", strerror(errno));
 
 	/* Main loop */
 	while (!exiting) {
 
 		if ((cl_socket = accept(listen_socket, (struct sockaddr*)&client,
 						&addrlen)) > 0) {
+			void *thread_args[] = {
+				&cl_socket, &i
+			};
+
 			for (i=0; i<params->max_clients; i++)
-				if (clients[i] == 0) break;
+				if (clients[i] == NULL) break;
 
 			if (i == params->max_clients) {
 				logit(L_WARNING "Too many clients, dropping client [%s]",
 						inet_ntoa(client.sin_addr));
+				send(cl_socket, "err_limit_reached", 18, 0);
+				while (close(cl_socket) < 0);
 				continue;
 			}
 
-			switch ((pid = fork())) {
-				case 0:
-					serve_client(cl_socket);
-					break;
+			clients[i] = calloc(1, sizeof(struct client));
 
-				case -1:
-					perror("fork");
-					exit(-1);
-					break;
-
-				default:
-					logit(L_INFO "Client [%s] connected", inet_ntoa(client.sin_addr));
-
-					clients[i] = calloc(1, sizeof(struct client));
-					clients[i]->pid    = pid;
-					clients[i]->socket = cl_socket;
-					break;
+			if ((ret = pthread_create(&thread, NULL,
+							serve_client, (void*)thread_args)) != 0) {
+				logit(L_FATAL "failed to create thread, error code: %d", ret);
+				exit(-6);
 			}
+
+			sem_wait(&thread_start_lock);
+
+			clients[i]->thread_id = thread;
+			clients[i]->socket    = cl_socket;
 		}
 	}
 
 	return 0;
 }
 
-void serve_client(int sock)
+void *serve_client(void *data)
 {
+	int sock = *((int*)((void**)data)[0]);
+	int i    = *((int*)((void**)data)[1]);
 	char buf[128] = { 0 };
+
+	sem_post(&thread_start_lock);
+
 	while (strcmp(buf, "exit") != 0) {
 		if (recv(sock, buf, 128, 0) < 0)
 			break;
 
 		logit(L_DEBUG "recieved: '%s'", buf);
 	}
+
 	shutdown(sock, SHUT_RDWR);
 	close(sock);
 
-	exit(0);
+	sem_wait(&thread_arr_lock);
+	free(clients[i]);
+	clients[i] = 0;
+	sem_post(&thread_arr_lock);
+
+	logit(L_DEBUG "Quitting thread");
+
+	return 0;
 }
 
