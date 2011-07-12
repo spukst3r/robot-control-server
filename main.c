@@ -133,15 +133,16 @@ void clean_up()
 
 	logit(L_DEBUG "Cleaning up...");
 
-	for (i=0; i<params.max_clients; i++) {
-		if (clients[i]) {
-			pthread_cancel(clients[i]->thread_id);
-			shutdown(clients[i]->socket, SHUT_RDWR);
-			close(clients[i]->socket);
-			free(clients[i]);
-			clients[i] = NULL;
+	if (clients)
+		for (i=0; i<params.max_clients; i++) {
+			if (clients[i]) {
+				pthread_cancel(clients[i]->thread_id);
+				shutdown(clients[i]->socket, SHUT_RDWR);
+				close(clients[i]->socket);
+				free(clients[i]);
+				clients[i] = NULL;
+			}
 		}
-	}
 
 	shutdown(listen_socket, SHUT_RDWR);
 	close(listen_socket);
