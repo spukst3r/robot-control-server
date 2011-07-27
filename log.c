@@ -42,7 +42,7 @@ int logit(const char *format, ...)
 	sem_wait(&sem);
 
 	gettimeofday(&tval, &tzone);
-	sprintf(buf, "[%02d:%02d:%02d.%ld] %s\n", tms->tm_hour, tms->tm_min, tms->tm_sec,
+	sprintf(buf, "[%02d:%02d:%02d.%6ld] %s\n", tms->tm_hour, tms->tm_min, tms->tm_sec,
 			tval.tv_usec, format);
 
 	va_start(ap, format);
