@@ -25,10 +25,10 @@ int daemonize()
 				//close(i);
 
 			i = open("/dev/null", O_RDWR);
-			//dup2(i, STDIN_FILENO);
-			//dup2(i, STDOUT_FILENO);
+			dup2(i, STDIN_FILENO);
+			dup2(i, STDOUT_FILENO);
 
-			umask(027);
+			umask(0);
 
 			chdir("/");
 

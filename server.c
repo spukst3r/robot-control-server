@@ -90,8 +90,10 @@ int start_server(struct parameters *params)
 				&cl_socket, &i
 			};
 
-			for (i=0; i<params->max_clients; i++)
+			for (i=0; i<params->max_clients; i++) {
+				logit(L_DEBUG "i = %d", i);
 				if (clients[i] == NULL) break;
+			}
 
 			if (i == params->max_clients) {
 				logit(L_WARNING "Too many clients, dropping client [%s]",
@@ -131,7 +133,7 @@ void *serve_client(void *data)
 		if (recv(sock, buf, 128, 0) < 0)
 			break;
 
-		logit(L_DEBUG "recieved: '%s'", buf);
+		//logit(L_DEBUG "recieved: '%s'", buf);
 	}
 
 	shutdown(sock, SHUT_RDWR);
