@@ -133,7 +133,7 @@ void *serve_client(void *data)
 		if (recv(sock, buf, 128, 0) < 0)
 			break;
 
-		//logit(L_DEBUG "recieved: '%s'", buf);
+		logit(L_DEBUG "recieved: '%s'", buf);
 	}
 
 	shutdown(sock, SHUT_RDWR);
