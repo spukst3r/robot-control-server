@@ -3,6 +3,7 @@
 #include <stdlib.h>
 
 #include <netdb.h>
+#include <unistd.h>
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <sys/ipc.h>
