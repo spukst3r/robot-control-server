@@ -39,7 +39,7 @@ int create_listen_socket(int port)
 		perror("bind");
 		return -1;
 	}
-	if (listen(s, 10) < 0) {
+	if (listen(s, 5) < 0) {
 		perror("listen");
 		return -1;
 	}
@@ -125,12 +125,16 @@ void *serve_client(void *data)
 {
 	int sock = *((int*)((void**)data)[0]);
 	int i    = *((int*)((void**)data)[1]);
+	int l    = 0;
 	char buf[128] = { 0 };
 
 	sem_post(&thread_start_lock);
 
 	while (strcmp(buf, "exit") != 0) {
-		if (recv(sock, buf, 128, 0) < 0)
+		if ((l = recv(sock, buf, 128, 0)) < 0)
+			break;
+		if (l == 0)
+			logit(L_DEBUG "peer disconnected");
 			break;
 
 		logit(L_DEBUG "recieved: '%s'", buf);
