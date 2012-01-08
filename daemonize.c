@@ -21,8 +21,8 @@ int daemonize()
 				exit(-1);
 			}
 
-			//for (i = getdtablesize(); i>=0; --i)
-				//close(i);
+			for (i = getdtablesize(); i>=0; --i)
+				close(i);
 
 			i = open("/dev/null", O_RDWR);
 			dup2(i, STDIN_FILENO);
