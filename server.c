@@ -133,9 +133,10 @@ void *serve_client(void *data)
 	while (strcmp(buf, "exit") != 0) {
 		if ((l = recv(sock, buf, 128, 0)) < 0)
 			break;
-		if (l == 0)
+		if (l == 0) {
 			logit(L_DEBUG "peer disconnected");
 			break;
+		}
 
 		logit(L_DEBUG "recieved: '%s'", buf);
 	}
