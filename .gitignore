@@ -5,4 +5,5 @@ CMake*
 lab.h
 cmake_install.cmake
 server
+dummy_client
 Makefile
