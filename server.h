@@ -6,6 +6,7 @@
 
 #define SERVER_VERSION "0.0.1"
 #define DEFAULT_SERVER_PORT 1190
+#define DEFAULT_LOG_FILE "/var/log/robo_server.log"
 //#define MP_SEM_NAME "/main_process_sem"
 
 struct parameters {

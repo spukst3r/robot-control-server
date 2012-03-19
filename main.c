@@ -14,6 +14,7 @@
 
 #include "server.h"
 #include "log.h"
+#include "config.h"
 
 struct parameters params;
 struct client **clients;
@@ -80,7 +81,7 @@ void parse_cmdline(int argc, char *argv[], struct parameters *params)
 
 			case 'M':
 				arg = atoi(optarg);
-				if (arg <=0 || arg > 10000) {
+				if (arg <=1 || arg > 10000) {
 					fprintf(stderr, "Maximum client number out of range 1..10000");
 					exit(-1);
 				}
@@ -102,12 +103,12 @@ void parse_cmdline(int argc, char *argv[], struct parameters *params)
 
 void default_params(struct parameters *p)
 {
-	char *path = "/var/log/robo_server.log";
+	char *path = DEFAULT_LOG_FILE;
 	p->log_file_path = malloc(strlen(path) + 1);
 
 	strcpy(p->log_file_path, path);
 
-	p->verb_level  = 3;
+	p->verb_level  = 5;
 	p->max_clients = 10;
 	p->server_port = DEFAULT_SERVER_PORT;
 }
@@ -115,7 +116,18 @@ void default_params(struct parameters *p)
 void show_help(const char *path)
 {
 	printf("Usage:\n"
-			"%s bla bla\n", path);
+			"%s [OPTION]...\n", path);
+	printf("  -h, --help              display this help and exit\n"
+			"  -V, --version           display version information and exit\n"
+			"  -v, --verbosity=LEVEL   set log verbosity level (from 0 to 5)\n"
+			"  -b, --daemonize         fork to background immediatly\n"
+			"  -l. --log-file=FILE     set log file location, '-' for logging to stdout\n"
+			"                            %s by default\n"
+			"  -p, --port=NUM          set server listening port to NUM\n"
+			"                            %d by default\n"
+			"  -M, --max-clients=NUM   set max clients count to NUM\n"
+			"                            %d by default\n",
+			DEFAULT_LOG_FILE, DEFAULT_SERVER_PORT, 10);
 }
 
 void show_version()
@@ -160,22 +172,11 @@ void clean_up()
 
 void signal_handler(int sig, siginfo_t *siginfo, void *data)
 {
-	//int i, status;
-
 	logit(L_INFO "%s\n", strsignal(sig));
 
 	switch (sig) {
 		case SIGCHLD:
 			logit(L_INFO "Child [pid: %d] exited", siginfo->si_pid);
-
-/* 			for (i=0; i<params.max_clients; i++)
- * 				if (clients[i] && clients[i]->pid == siginfo->si_pid) {
- * 					waitpid(siginfo->si_pid, &status, 0);
- * 					logit(L_DEBUG "Freeing memory for client struct...");
- * 					free(clients[i]);
- * 					clients[i] = 0;
- * 				}
- */
 			break;
 
 		default:
@@ -197,6 +198,10 @@ int main(int argc, char *argv[])
 	}
 
 	default_params(&params);
+
+	if (parse_config("rcsrc", &params))
+		return -1;
+
 	parse_cmdline(argc, argv, &params);
 
 	if (strcmp(params.log_file_path, "-") == 0)
