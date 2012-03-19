@@ -1,0 +1,7 @@
+# Server related settings
+
+server_port = 1190
+server_log_file = /var/log/rc_server.log
+server_max_clients = 100
+server_verbosity = 5
+
