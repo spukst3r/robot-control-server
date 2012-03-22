@@ -205,7 +205,7 @@ int main(int argc, char *argv[])
 		logit(L_WARNING "Failed to open log file for writing, logging to stdout...");
 	}
 
-	logit(L_DEBUG "Command line parameters:\n"
+	logit(L_DEBUG "Startup parameters:\n"
 			"\tverb_level:\t%d\n"
 			"\tdaemonize:\t%d\n"
 			"\tlog_file_path:\t%s\n"
