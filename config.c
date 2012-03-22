@@ -6,11 +6,6 @@
 #include <errno.h>
 #include <ctype.h>
 
-static const char *keys[] = {
-	"server_port", "server_max_clients", "server_verbosity",
-	"server_daemonize", "server_log_file", NULL
-};
-
 int parse_config(const char *file_name, struct parameters *params)
 {
 	FILE *f;
@@ -105,31 +100,50 @@ char *trim_string(const char *str)
 int parse_keyvalue(const char *key, const char *value,
 		struct parameters *params)
 {
-	const char **current_key;
-	unsigned int cmd = 0;
 	int temp;
 
-	for (current_key=keys; *current_key; ++current_key, ++cmd) {
-		if (!strcmp(*current_key, key))
-			break;
+	if (!strcmp("server_port", key)) {
+		params->server_port = atoi(value);
+
+	} else if (!strcmp("server_max_clients", key)) {
+		params->max_clients = atoi(value);
+
+	} else if (!strcmp("server_log_file", key)) {
+		free(params->log_file_path);
+		params->log_file_path = malloc(strlen(value) + 1);
+		strcpy(params->log_file_path, value);
+
+	} else if (!strcmp("server_daemonize", key)) {
+		temp = atoi(value);
+
+		if (temp)
+			params->daemonize = 1;
+		else
+			params->daemonize = 0;
+
+	} else if (!strcmp("server_verbosity", key)) {
+		params->verb_level = atoi(value);
+
+	} else {
+		return -1;
 	}
 
-	if (!*current_key)
+	return 0;
+}
+
+int check_config(struct parameters *params)
+{
+	if (params->server_port < 1 || params->server_port > 65535) {
+		fprintf(stderr, "Server port must be in range 1..65535!\n");
 		return -1;
-
-	logit(L_DEBUG "cmd index: %d", cmd);
-	switch (cmd) {
-		case 0: /* server_port */
-			temp = atoi(value);
-			if (temp <= 0 || temp >= 65535)
-				return -1;
-
-			logit(L_DEBUG "parse_config: %s = %d", key, temp);
-			params->server_port = temp;
-			break;
-
-		case 1: /* max_clients */
-			break;
+	}
+	if (params->verb_level < 0 || params->verb_level > 5) {
+		fprintf(stderr, "Verbosity level must be in range 0..5!\n");
+		return -1;
+	}
+	if (params->max_clients < 1 || params->max_clients > 10000) {
+		fprintf(stderr, "Maximum client number must be in range 1..10000!\n");
+		return -1;
 	}
 
 	return 0;

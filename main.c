@@ -50,14 +50,8 @@ void parse_cmdline(int argc, char *argv[], struct parameters *params)
 				exit(0);
 
 			case 'v':
-				if (strlen(optarg) == 1
-						&& '0' <= *optarg
-						&& '5' >= *optarg) {
-					params->verb_level = *optarg - '0';
-				} else {
-					fprintf(stderr, "Verbosity level should be 0..5!\n");
-					exit(-1);
-				}
+				arg = atoi(optarg);
+				params->verb_level = arg;
 				break;
 
 			case 'b':
@@ -72,19 +66,11 @@ void parse_cmdline(int argc, char *argv[], struct parameters *params)
 
 			case 'p':
 				arg = atoi(optarg);
-				if (arg <= 0 || arg > 65535) {
-					fprintf(stderr, "Invalid port number: %d\n", arg);
-					exit(-1);
-				}
 				params->server_port = arg;
 				break;
 
 			case 'M':
 				arg = atoi(optarg);
-				if (arg <=1 || arg > 10000) {
-					fprintf(stderr, "Maximum client number out of range 1..10000");
-					exit(-1);
-				}
 				params->max_clients = arg;
 				break;
 
@@ -203,6 +189,10 @@ int main(int argc, char *argv[])
 		return -1;
 
 	parse_cmdline(argc, argv, &params);
+	if (check_config(&params)) {
+		show_help(argv[0]);
+		return -1;
+	}
 
 	if (strcmp(params.log_file_path, "-") == 0)
 		params.log_file = 2; //stderr
